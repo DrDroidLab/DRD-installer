@@ -13,6 +13,7 @@ GRAFANA_API_KEY = os.getenv('GRAFANA_API_KEY')
 # Prometheus API parameters
 PROMETHEUS_QUERY_RANGE_URL = os.getenv('PROMETHEUS_HOST') + "/api/v1/query_range"
 
+
 # Function to fetch alerts from Grafana
 def fetch_alerts():
     headers = {
@@ -35,16 +36,24 @@ def fetch_datasources():
     alerts = response.json()
     return alerts
 
-# Function to query Prometheus for metric values with 5 minute resolution for past 60 minutes
-def query_prometheus(metric_query):
+
+def query_prometheus_from_grafana(ds_id, metric_query):
     end_time = datetime.utcnow()
     start_time = end_time - timedelta(minutes=60*24*7)
 
-    url = PROMETHEUS_QUERY_RANGE_URL + '?query={}&start={}&end={}&step={}'.format(metric_query, datetime.strftime(start_time, '%Y-%m-%dT%H:%M:%S.%fZ'), datetime.strftime(end_time, '%Y-%m-%dT%H:%M:%S.%fZ'), "1m")
+    headers = {
+        "Authorization": f"Bearer {GRAFANA_API_KEY}",
+        "Content-Type": "application/json"
+    }
 
-    response = requests.get(url)
+    url = GRAFANA_URL + '/api/datasources/proxy/uid/{}/api/v1/query_range'.format(ds_id) + '?query={}&start={}&end={}&step={}'.format(metric_query, datetime.strftime(start_time, '%Y-%m-%dT%H:%M:%S.%fZ'), datetime.strftime(end_time, '%Y-%m-%dT%H:%M:%S.%fZ'), "1m")
+
+    print('url: ', url)
+    response = requests.get(url, headers=headers)
+    print('response: ', response.text)
     data = response.json()
     return data
+
 
 # Main function
 def main():
@@ -89,7 +98,7 @@ def main():
 
     for ds_id in prometheus_datasources[:1]:
         for metric_query in data_source_metrics_exprs_dict[ds_id][:1]:
-            metric_values = query_prometheus(metric_query)
+            metric_values = query_prometheus_from_grafana(ds_id, metric_query)
             metrics_ws[f"A{metric_row_index}"] = metric_query
             metrics_ws[f"B{metric_row_index}"] = json.dumps(metric_values)
 
