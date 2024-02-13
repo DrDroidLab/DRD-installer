@@ -16,3 +16,5 @@ After the variables are setup, run the script (needs python3):
 pip install openpyxl requests
 python3 import_alert_metrics.py
 ```
+
+Please note: In this script, it is assumed that you have a datasource by the name, 'prometheus', which is the source of metrics used for alerts.
